@@ -1,0 +1,297 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  Storage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 16384
+  InstanceType:
+    Type: String
+    Default: "db.t2.micro"
+  RetentionPeriod:
+    Type: Number
+    Default: 14
+    MinValue: 0
+    MaxValue: 35
+  DBName:
+    Type: String
+    Default: databasev2
+    MaxLength: 63
+    MinLength: 1
+  EngineVersion:
+    Type: String
+    Default: "11.4"
+  MonitoringInterval:
+    Type: Number
+    Default: 60
+    AllowedValues:
+      - 0
+      - 1
+      - 5
+      - 10
+      - 15
+      - 30
+      - 60
+  PIRetention:
+    Type: Number
+    Default: 7
+    AllowedValues:
+      - 7
+      - 731
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.3.0.0/16 # 65536 IPs
+      # No public IPs
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default # Allow on shared hardware
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+  DatabaseV2Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      # AssignIpv6AddressOnCreation: for Ipv6
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      CidrBlock: 10.3.0.0/18 # 16382 IPs
+      # Ipv6CidrBlock: Required if creating Ipv6 Address
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+      VpcId: !Ref VPC
+  DatabaseV2Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      # AssignIpv6AddressOnCreation: for Ipv6
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: 10.3.64.0/18 # 16382 IPs
+      # Ipv6CidrBlock: Required if creating Ipv6 Address
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+      VpcId: !Ref VPC
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      # AssignIpv6AddressOnCreation: for Ipv6
+      AvailabilityZone:
+        Fn::Select:
+          - 2
+          - Fn::GetAZs: ""
+      CidrBlock: 10.3.128.0/18 # 16382 IPs
+      # Ipv6CidrBlock: Required if creating Ipv6 Address
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+      VpcId: !Ref VPC
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+      VpcId: !Ref VPC
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+        - Key: Public
+          Value: True
+      VpcId: !Ref VPC
+  DatabaseV2Subnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref DatabaseV2Subnet1
+  DatabaseV2Subnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref DatabaseV2Subnet2
+  PublicSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+      # VpnGatewayId: .
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      # InstanceId: .
+      # PublicIpv4Pool: .
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+  InternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - InternetGateway
+      - InternetGatewayAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      # DestinationIpv6CidrBlock: .
+      # EgressOnlyInternetGateway: .
+      GatewayId: !Ref InternetGateway
+      # InstanceId: .
+      # NatGatewayId: .
+      # NetworkInterfaceId: .
+      RouteTableId: !Ref PublicRouteTable
+      # TransitGatewayId: .
+      # VpcPeeringConnectionId: .
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      # DestinationIpv6CidrBlock: .
+      # EgressOnlyInternetGateway: .
+      # GatewayId: !Ref InternetGateway
+      # InstanceId: .
+      NatGatewayId: !Ref NatGateway
+      # NetworkInterfaceId: .
+      RouteTableId: !Ref RouteTable
+      # TransitGatewayId: .
+      # VpcPeeringConnectionId: .
+  DatabaseV2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Database V2 privacy rules
+      # GroupName: human-readable name for group
+      SecurityGroupEgress:
+        - Description: Open egress
+          FromPort: -1
+          ToPort: -1
+          IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - Description: Open ingress
+          FromPort: -1
+          ToPort: -1
+          IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+      VpcId: !Ref VPC
+
+  DatabaseV2SubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet Group for DatabaseV2
+      # DBSubentGroupName: human-readable
+      SubnetIds:
+        - !Ref DatabaseV2Subnet1
+        - !Ref DatabaseV2Subnet2
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+
+  DatabaseV2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref Storage
+      # # Keep version up-to-date during maintence window
+      AllowMajorVersionUpgrade: true
+      AutoMinorVersionUpgrade: true
+      AvailabilityZone: !Ref AWS::NoValue # Pick random AZ
+      BackupRetentionPeriod: !Ref RetentionPeriod
+      # CharacterSetName: Set specific character set
+      CopyTagsToSnapshot: true
+      # DBClusterIdentifier: When part of a cluster
+      DBInstanceClass: !Ref InstanceType
+      # DBInstanceIdentifier: Give name for resource
+      # DBName: Name for instance 'postgres' used in default
+      # DBParameterGroupName: Specify parameters
+      # DBSecurityGroups: This or VPCSecurityGroup
+      # DBSnapshotIdentifier: To restore from snapshot
+      DBSubnetGroupName: !Ref DatabaseV2SubnetGroup
+      DeleteAutomatedBackups: false
+      DeletionProtection: true
+      # Domain: For Microsoft SQL
+      # DomainIAMRoleName: For AD with Microsoft SQL
+      EnableCloudwatchLogsExports:
+        - postgresql
+      # EnableIAMDatabaseAuthentication: Only avaialbe for MySQL
+      EnablePerformanceInsights: true
+      Engine: postgres
+      EngineVersion: !Ref EngineVersion
+      # Iops: Provisioned IOPS for IOPS DB
+      # KmsKeyId: For encrypting database at rest
+      # LicenseModel: License to use DB engine
+      MasterUsername: "{{resolve:ssm:/prod/database/username:1}}"
+      MasterUserPassword: "{{resolve:ssm-secure:/prod/database/password:1}}"
+      MonitoringInterval: !Ref MonitoringInterval
+      MonitoringRoleArn: arn:aws:iam::076279718063:role/default-rds-enhanced-monitoring-role
+      MultiAZ: false
+      # OptionGroupName: Specify options to associate
+      # PerformanceInsightsKMSKeyId: Encrypt Performance Insights
+      PerformanceInsightsRetentionPeriod: !Ref PIRetention
+      Port: 5432
+      PreferredBackupWindow: 17:00-18:00 # Midnight - 1am CST
+      PreferredMaintenanceWindow: tue:18:00-tue:23:00
+      # ProcessorFeatures: Set processor optimizations
+      # PromotionTier: For Aurora
+      PubliclyAccessible: false
+      # SourceDBInstanceIdentitifier: Set source for a read replica
+      # SourceRegion: Read replica source region
+      StorageEncrypted: false
+      StorageType: gp2
+      Tags:
+        - Key: Stack
+          Value: !Ref AWS::StackName
+      # Timezone: Only supported for Microsoft SQL
+      UseDefaultProcessorFeatures: true
+      VPCSecurityGroups:
+        - !Ref DatabaseV2SecurityGroup
+
+  HostParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      # AllowedPattern:
+      Name: /prod/database/host
+      Value:
+        Fn::GetAtt: DatabaseV2.Endpoint.Address
+      Tags:
+        Stack: !Ref AWS::StackName
+      Tier: Standard
+      Type: String
+  PortParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      # AllowedPattern:
+      Name: /prod/database/port
+      Value:
+        Fn::GetAtt: DatabaseV2.Endpoint.Port
+      Tags:
+        Stack: !Ref AWS::StackName
+      Tier: Standard
+      Type: String
