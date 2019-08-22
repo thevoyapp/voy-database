@@ -80,21 +80,21 @@ Resources:
         - Key: Stack
           Value: !Ref AWS::StackName
       VpcId: !Ref VPC
-  PublicSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      # AssignIpv6AddressOnCreation: for Ipv6
-      AvailabilityZone:
-        Fn::Select:
-          - 2
-          - Fn::GetAZs: ""
-      CidrBlock: 10.3.128.0/18 # 16382 IPs
-      # Ipv6CidrBlock: Required if creating Ipv6 Address
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Stack
-          Value: !Ref AWS::StackName
-      VpcId: !Ref VPC
+  # PublicSubnet:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     # AssignIpv6AddressOnCreation: for Ipv6
+  #     AvailabilityZone:
+  #       Fn::Select:
+  #         - 2
+  #         - Fn::GetAZs: ""
+  #     CidrBlock: 10.3.128.0/18 # 16382 IPs
+  #     # Ipv6CidrBlock: Required if creating Ipv6 Address
+  #     MapPublicIpOnLaunch: true
+  #     Tags:
+  #       - Key: Stack
+  #         Value: !Ref AWS::StackName
+  #     VpcId: !Ref VPC
   RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -102,15 +102,15 @@ Resources:
         - Key: Stack
           Value: !Ref AWS::StackName
       VpcId: !Ref VPC
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      Tags:
-        - Key: Stack
-          Value: !Ref AWS::StackName
-        - Key: Public
-          Value: True
-      VpcId: !Ref VPC
+  # PublicRouteTable:
+  #   Type: AWS::EC2::RouteTable
+  #   Properties:
+  #     Tags:
+  #       - Key: Stack
+  #         Value: !Ref AWS::StackName
+  #       - Key: Public
+  #         Value: True
+  #     VpcId: !Ref VPC
   DatabaseV2Subnet1Association:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -121,66 +121,66 @@ Resources:
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref DatabaseV2Subnet2
-  PublicSubnetAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Stack
-          Value: !Ref AWS::StackName
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-      # VpnGatewayId: .
-  ElasticIP:
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-      # InstanceId: .
-      # PublicIpv4Pool: .
-  NatGateway:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt ElasticIP.AllocationId
-      SubnetId: !Ref PublicSubnet
-      Tags:
-        - Key: Stack
-          Value: !Ref AWS::StackName
-  InternetRoute:
-    Type: AWS::EC2::Route
-    DependsOn:
-      - InternetGateway
-      - InternetGatewayAttachment
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      # DestinationIpv6CidrBlock: .
-      # EgressOnlyInternetGateway: .
-      GatewayId: !Ref InternetGateway
-      # InstanceId: .
-      # NatGatewayId: .
-      # NetworkInterfaceId: .
-      RouteTableId: !Ref PublicRouteTable
-      # TransitGatewayId: .
-      # VpcPeeringConnectionId: .
-  PrivateRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      # DestinationIpv6CidrBlock: .
-      # EgressOnlyInternetGateway: .
-      # GatewayId: !Ref InternetGateway
-      # InstanceId: .
-      NatGatewayId: !Ref NatGateway
-      # NetworkInterfaceId: .
-      RouteTableId: !Ref RouteTable
-      # TransitGatewayId: .
-      # VpcPeeringConnectionId: .
+  # PublicSubnetAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     RouteTableId: !Ref PublicRouteTable
+  #     SubnetId: !Ref PublicSubnet
+  # InternetGateway:
+  #   Type: AWS::EC2::InternetGateway
+  #   Properties:
+  #     Tags:
+  #       - Key: Stack
+  #         Value: !Ref AWS::StackName
+  # InternetGatewayAttachment:
+  #   Type: AWS::EC2::VPCGatewayAttachment
+  #   Properties:
+  #     InternetGatewayId: !Ref InternetGateway
+  #     VpcId: !Ref VPC
+  #     # VpnGatewayId: .
+  # ElasticIP:
+  #   Type: AWS::EC2::EIP
+  #   Properties:
+  #     Domain: vpc
+  #     # InstanceId: .
+  #     # PublicIpv4Pool: .
+  # NatGateway:
+  #   Type: AWS::EC2::NatGateway
+  #   Properties:
+  #     AllocationId: !GetAtt ElasticIP.AllocationId
+  #     SubnetId: !Ref PublicSubnet
+  #     Tags:
+  #       - Key: Stack
+  #         Value: !Ref AWS::StackName
+  # InternetRoute:
+  #   Type: AWS::EC2::Route
+  #   DependsOn:
+  #     - InternetGateway
+  #     - InternetGatewayAttachment
+  #   Properties:
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     # DestinationIpv6CidrBlock: .
+  #     # EgressOnlyInternetGateway: .
+  #     GatewayId: !Ref InternetGateway
+  #     # InstanceId: .
+  #     # NatGatewayId: .
+  #     # NetworkInterfaceId: .
+  #     RouteTableId: !Ref PublicRouteTable
+  #     # TransitGatewayId: .
+  #     # VpcPeeringConnectionId: .
+  # PrivateRoute:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     # DestinationIpv6CidrBlock: .
+  #     # EgressOnlyInternetGateway: .
+  #     # GatewayId: !Ref InternetGateway
+  #     # InstanceId: .
+  #     NatGatewayId: !Ref NatGateway
+  #     # NetworkInterfaceId: .
+  #     RouteTableId: !Ref RouteTable
+  #     # TransitGatewayId: .
+  #     # VpcPeeringConnectionId: .
   DatabaseV2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -188,21 +188,20 @@ Resources:
       # GroupName: human-readable name for group
       SecurityGroupEgress:
         - Description: Open egress
-          FromPort: -1
-          ToPort: -1
-          IpProtocol: -1
-          CidrIp: 0.0.0.0/0
+          FromPort: 5432
+          ToPort: 5432
+          IpProtocol: tcp
+          CidrIp: 10.3.0.0/16
       SecurityGroupIngress:
         - Description: Open ingress
-          FromPort: -1
-          ToPort: -1
-          IpProtocol: -1
-          CidrIp: 0.0.0.0/0
+          FromPort: 5432
+          ToPort: 5432
+          IpProtocol: tcp
+          CidrIp: 10.3.0.0/16
       Tags:
         - Key: Stack
           Value: !Ref AWS::StackName
       VpcId: !Ref VPC
-
   DatabaseV2SubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -214,7 +213,6 @@ Resources:
       Tags:
         - Key: Stack
           Value: !Ref AWS::StackName
-
   DatabaseV2:
     Type: AWS::RDS::DBInstance
     Properties:

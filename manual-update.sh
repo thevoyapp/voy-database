@@ -15,6 +15,7 @@ awslib deploy-lambda \
   --enc-env "PASSWORD=`awslib import-value -e ssm /prod/database/password`" \
   --env "HOST=`awslib import-value -e ssm /prod/database/host`" \
   --env "PORT=`awslib import-value -e ssm /prod/database/port`" \
+  --time-out 20 \
   $name \
   BaseApiRole \
   go1.x \

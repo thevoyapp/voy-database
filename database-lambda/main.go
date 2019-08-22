@@ -8,6 +8,7 @@ import (
 )
 
 func HandleRequest(ctx context.Context, event *database.DatabaseCall) (interface{}, error) {
+  fmt.Println("start")
   db, err := database.Open(event.ConnectionInfo)
   fmt.Println("connect")
   if err != nil {
@@ -15,8 +16,13 @@ func HandleRequest(ctx context.Context, event *database.DatabaseCall) (interface
     fmt.Println(err)
     return nil, nil
   }
-  db.Close()
-  fmt.Println("close")
+  defer db.Close()
+  fmt.Println(event.Request)
+  result, err := event.Request.Invoke(db)
+  fmt.Println(result, err)
+  fmt.Printf("%T\n", result)
+  fmt.Println(result)
+  fmt.Println("Hello World")
   return nil, nil
 }
 

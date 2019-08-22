@@ -1,7 +1,7 @@
 REGION := us-east-2
 ACCOUNT := 076279718063
 
-do:
+do: database-update manual-update run
 
 manual-update:
 	bash manual-update.sh
@@ -11,12 +11,7 @@ database-update:
 
 run:
 	aws lambda invoke --function-name manual-database-task response.txt
-	@cat response.txt
-	@echo ""
-	# aws lambda invoke --function-name manual-database-task \
-	# 	--invocation-type RequestResponse \
-	# 	--log-type Tail \
-	# 	/tmp/out | jq ".LogResult" | base64 --decode
+	@cat response.txt | python -m base64 -d || cat response.txt
 
 deploy:
 	aws cloudformation deploy \

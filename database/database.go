@@ -12,12 +12,11 @@ type DatabaseCall struct {
 }
 
 func Open(conn *ConnectionInfo) (*sql.DB, error) {
-  c := conn.String()
-  fmt.Println(c)
-  db, err := sql.Open("postgres", c)
+  db, err := sql.Open("postgres", conn.String())
   if err != nil {return nil, err}
   fmt.Println("Connected")
   err = db.Ping()
+  fmt.Println("Pinged")
   if err != nil {return nil, err}
   return db, nil
 }

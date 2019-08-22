@@ -12,7 +12,8 @@ awslib s3upload --as-type=cfn handler.zip lambda/$name/$version
 rm handler.zip
 awslib deploy-lambda \
   --sg-id sg-0b4c9d1b9761266a9 \
-  --subnet-id subnet-0ae1d9803bce2d0e5 \
+  --subnet-id subnet-0b097b5c1a3643b48 \
+  --subnet-id subnet-0f682d6638e100118 \
   --no-version \
   $name \
   BaseApiRole \
